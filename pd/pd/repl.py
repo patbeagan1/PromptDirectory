@@ -287,7 +287,10 @@ def interactive_mode(repo, username=None):
 
             print("Opening in browser 🌐")
             open_in_browser(output)
-
+        except KeyboardInterrupt:
+            print()
+            print("Exiting...")
+            exit(0)
         except Exception as e:
             print(e)
             print(f"Error: {traceback.format_exc()}")
