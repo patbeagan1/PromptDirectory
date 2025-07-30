@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 # Configuration file location
-CONFIG_FILE = Path.home() / ".config" / "pd" / "config.json"
+CONFIG_FILE = Path.home() / ".config" / "promptdir" / "config.json"
 
 def load_config() -> dict:
     """Load configuration from config file"""

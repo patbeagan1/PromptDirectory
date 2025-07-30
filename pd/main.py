@@ -1,4 +1,4 @@
-from pd import cli
+from promptdir import cli
 
 if __name__ == "__main__":
     cli()

@@ -6,12 +6,12 @@ import traceback
 from os.path import expanduser
 from pathlib import Path
 
-from pd.commands import (
+from promptdir.commands import (
     list_snippets, read_snippet, write_snippet, fork_snippet,
     edit_snippet, copy_snippet, sync_all, create_new_prompt,
     get_help, get_command_help
 )
-from pd.utils.browser import open_in_browser
+from promptdir.utils.browser import open_in_browser
 
 # Import readline with platform-specific handling
 try:

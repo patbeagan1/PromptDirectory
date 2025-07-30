@@ -5,7 +5,7 @@ A command-line tool for managing and using prompts from a GitHub repository.
 ## Installation
 
 ```bash
-uv install pd
+uv install promptdir
 ```
 
 ## Usage
@@ -14,47 +14,47 @@ uv install pd
 
 ```bash
 # Run with default configuration in interactive mode
-pd
+promptdir
 
 # Run with specific repository
-pd --repo username/repository
+promptdir --repo username/repository
 
 # Skip SSH agent setup
-pd --no-ssh
+promptdir --no-ssh
 ```
 
 ### Command-line Mode
 
 ```bash
 # List all available snippets
-pd list
+promptdir list
 
 # Read a snippet
-pd read user/snippet
+promptdir read user/snippet
 
 # Write content to a snippet
-pd write snippet --content "Your content here"
+promptdir write snippet --content "Your content here"
 
 # Fork a snippet from another user
-pd fork user/snippet
+promptdir fork user/snippet
 
 # Edit a snippet in your default editor
-pd edit snippet
+promptdir edit snippet
 
 # Copy a snippet to clipboard
-pd copy user/snippet
+promptdir copy user/snippet
 
 # Copy and hydrate a template
-pd copy user/template --hydrate --name="John" -- Additional text
+promptdir copy user/template --hydrate --name="John" -- Additional text
 
 # Sync repository with remote
-pd sync
+promptdir sync
 
 # Create a new snippet file
-pd new filename
+promptdir new filename
 
 # Direct template hydration
-pd template_name --param1="value1" -- Additional text
+promptdir template_name --param1="value1" -- Additional text
 ```
 
 ## Configuration

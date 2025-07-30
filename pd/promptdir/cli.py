@@ -3,13 +3,13 @@
 import argparse
 import os
 
-from pd.utils.config import load_config, save_config
-from pd.utils.ssh import setup_ssh_agent
-from pd.utils.snippet_repo import SnippetRepo
+from promptdir.utils.config import load_config, save_config
+from promptdir.utils.ssh import setup_ssh_agent
+from promptdir.utils.snippet_repo import SnippetRepo
 
 
 def cli():
-    """Main entry point for the pd command"""
+    """Main entry point for the promptdir command"""
     # Define merged argument parser
     parser = argparse.ArgumentParser(description="Prompt Directory - Manage GitHub-based prompts")
 
@@ -47,7 +47,7 @@ def cli():
 
     # If no command is provided, run in interactive mode
     if not args.command:
-        from pd.repl import interactive_mode
+        from promptdir.repl import interactive_mode
         interactive_mode(repo)
         return 0
 
@@ -111,7 +111,7 @@ def handle_cli_command(args, remaining_args, repo):
             output = repo.hydrate(name, template_args, suffix)
             print(output)
 
-            from pd.utils.browser import open_in_browser
+            from promptdir.utils.browser import open_in_browser
             open_in_browser(output)
 
         return 0

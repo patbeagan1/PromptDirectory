@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from pd.utils.git_command_runner import GitCommandRunner
+from promptdir.utils.git_command_runner import GitCommandRunner
 
 # Cross-platform clipboard functionality
 try:
