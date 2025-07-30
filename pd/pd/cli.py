@@ -55,7 +55,6 @@ def setup_readline(repo):
             self.current_candidates = []
 
         def complete(self, text, state):
-            print(f"completion called {state}::{text}")
             """Return the state-th completion for text."""
             if state == 0:  # Generate candidates on first call
                 if not text:
