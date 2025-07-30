@@ -119,6 +119,3 @@ def handle_cli_command(args, remaining_args, repo):
         print(f"Error: {str(e)}")
         return 1
 
-
-if __name__ == "__main__":
-    main()

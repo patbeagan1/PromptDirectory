@@ -3,6 +3,8 @@
 import os
 import re
 import traceback
+from os.path import expanduser
+from pathlib import Path
 
 from pd.commands import (
     list_snippets, read_snippet, write_snippet, fork_snippet,
@@ -157,7 +159,7 @@ def setup_readline(repo):
                 return None
 
     # Set up history file
-    history_file = os.path.expanduser("~/.pd_history")
+    history_file = os.path.expanduser("~/pd_history")
     try:
         readline.read_history_file(history_file)
         # Set history length
@@ -176,8 +178,8 @@ def setup_readline(repo):
     readline.parse_and_bind("tab: complete")
 
 
+
 def parse_inline_command(command):
-    """Parse an inline command into template name, args, and suffix"""
     # First split on -- to separate main command and suffix
     parts = command.strip().split(' -- ')
     main_part = parts[0]
@@ -187,15 +189,14 @@ def parse_inline_command(command):
     template_pattern = r'^(\w+/?\w*)'
     template_match = re.match(template_pattern, main_part)
     if not template_match:
-        raise ValueError(f"Invalid command format: {command}")
-
+        raise ValueError("Invalid command format. Use: command [--arg=\"val\"] [-- suffix]")
     template_name = template_match.group(1)
 
-    # Extract arguments
-    arg_pattern = r'--(\[\w-]+)="([^"]*?)"'
+    # Parse named arguments
     args = {}
-    for match in re.finditer(arg_pattern, main_part):
-        args[match.group(1)] = match.group(2)
+    arg_matches = re.finditer(r'--(\w+)="([^"]*?)"', main_part)
+    for m in arg_matches:
+        args[m.group(1)] = m.group(2)
 
     return template_name, args, suffix
 

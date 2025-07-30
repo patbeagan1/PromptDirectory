@@ -1,15 +1,9 @@
 [project]
 name = "pd"
 version = "0.1.0"
-description = "Prompt Directory - A tool for managing prompts"
-authors = [
-    { name = "Patrick Beagan", email = "pbeagan@example.com" }
-]
+description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-
-[project.scripts]
-pd = "pd.cli:main"
-
-[tool.setuptools]
-packages = ["pd"]
+dependencies = [
+    "readline>=6.2.4.2",
+]
