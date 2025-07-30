@@ -74,6 +74,7 @@ def setup_readline(repo):
                     cmd = cmd + " "
                     try:
                         snippets = self.repo.get_snippet_names() if hasattr(self.repo, 'get_snippet_names') else []
+                        print(snippets)
                         self.current_candidates = [cmd + snippet for snippet in snippets if snippet.startswith(partial)]
                     except:
                         print("completion failed.")
@@ -124,7 +125,9 @@ def get_general_help():
 
     list                  List all available snippets
     read <user/snippet>   Read a snippet from a user's branch
-    write <user/snippet> --content <content>  Write content to a snippet
+    write <snippet> --content <content>  
+                              Write content to a snippet. 
+                              It assumes the current user's branch.
     fork <user/snippet>   Copy a snippet from another user to your branch
     edit <user/snippet>   Open a snippet in your default editor
     copy <user/snippet>   Copy a snippet to your clipboard
