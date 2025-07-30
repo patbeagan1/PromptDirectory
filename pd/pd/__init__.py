@@ -1,4 +1,5 @@
 # Prompt Directory package
-from .cli import main
+from .cli import cli
 
-__version__ = "0.1.0"
+def main():
+    cli()

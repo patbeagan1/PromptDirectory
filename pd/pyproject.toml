@@ -1,9 +1,10 @@
 [project]
-name = "pd"
-version = "0.1.0"
+name = "promptdir"
+version = "0.1.1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "readline>=6.2.4.2",
-]
+dependencies = []
+
+[project.scripts]
+promptdir = "pd:main"

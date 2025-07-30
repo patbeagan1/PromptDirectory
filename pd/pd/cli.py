@@ -8,7 +8,7 @@ from pd.utils.ssh import setup_ssh_agent
 from pd.utils.snippet_repo import SnippetRepo
 
 
-def main():
+def cli():
     """Main entry point for the pd command"""
     # Define merged argument parser
     parser = argparse.ArgumentParser(description="Prompt Directory - Manage GitHub-based prompts")
@@ -37,7 +37,7 @@ def main():
         print("Error: No prompt repository specified. Use --repo to set it. The last used repo will be remembered.")
         return 1
 
-    # Setup SSH agent if not disabled
+    # Setup SSH agent if not already disabled
     if not args.no_ssh:
         setup_ssh_agent()
 
