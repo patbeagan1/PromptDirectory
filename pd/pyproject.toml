@@ -7,3 +7,22 @@ requires-python = ">=3.12"
 dependencies = [
     "gitpython>=3.1.44",
 ]
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pd"
+version = "0.1.0"
+description = "Prompt Directory - A tool for managing prompts"
+authors = [
+    {name = "Patrick Beagan", email = "pbeagan@example.com"}
+]
+readme = "README.md"
+requires-python = ">=3.8"
+
+[project.scripts]
+pd = "pd.cli:main"
+
+[tool.setuptools]
+packages = ["pd"]

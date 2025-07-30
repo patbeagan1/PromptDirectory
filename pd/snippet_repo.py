@@ -234,6 +234,9 @@ class SnippetRepo:
     def write_snippet(self, address, content):
         """Write and commit snippet to repo."""
         user, snippet = address.split("/")
+        if self.get_username() != user:
+            raise PermissionError(f"❌ Cannot write to another user's branch: {user}")
+
         worktree = self.get_worktree(user)
         prompts_dir = worktree / "prompts"
         prompts_dir.mkdir(parents=True, exist_ok=True)
