@@ -1,10 +1,10 @@
 [project]
 name = "promptdir"
-version = "0.2.2"
+version = "0.2.3"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "pbeagan", email = "pbeagan1@gmail.com" }
+    { name = "pbeagan" }
 ]
 requires-python = ">=3.12"
 dependencies = []

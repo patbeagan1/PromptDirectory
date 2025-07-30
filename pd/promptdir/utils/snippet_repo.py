@@ -124,7 +124,7 @@ class SnippetRepo:
     def get_username(self):
         """Get Git config username."""
         result = self.git.run_repo_cmd("config", "user.name")
-        return result.stdout.strip()
+        return result.stdout.strip().replace(" ", "_")
 
     def _list_branches(self):
         """Get list of repository branches."""
