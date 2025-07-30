@@ -14,16 +14,19 @@ from pd.utils.browser import open_in_browser
 # Import readline with platform-specific handling
 try:
     import readline
+
     READLINE_AVAILABLE = True
 except ImportError:
     try:
         # For Windows, try to use pyreadline or pyreadline3
         try:
             import pyreadline3 as readline
+
             READLINE_AVAILABLE = True
         except ImportError:
             try:
                 import pyreadline as readline
+
                 READLINE_AVAILABLE = True
             except ImportError:
                 READLINE_AVAILABLE = False
@@ -42,6 +45,7 @@ def setup_readline(repo):
     # Define command completer class
     class CommandCompleter:
         """Tab completion for the REPL."""
+
         def __init__(self, repo):
             self.repo = repo
 
@@ -276,9 +280,9 @@ def interactive_mode(repo, username=None):
                 current_username = username or repo.get_username()
                 name = f"{current_username}/{name}"
             output = repo.hydrate(name, args, suffix)
-            print("\"\"\"") 
+            print("\"\"\"")
             print(output)
-            print("\"\"\"") 
+            print("\"\"\"")
             print()
 
             print("Opening in browser 🌐")

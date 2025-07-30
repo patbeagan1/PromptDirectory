@@ -1,42 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
 import os
-import re
-import subprocess
-import textwrap
-import traceback
-from pathlib import Path
 
 from pd.utils.config import load_config, save_config
 from pd.utils.ssh import setup_ssh_agent
 from snippet_repo import SnippetRepo
-
-# Import readline with platform-specific handling
-try:
-    import readline
-    READLINE_AVAILABLE = True
-except ImportError:
-    try:
-        # For Windows, try to use pyreadline or pyreadline3
-        try:
-            import pyreadline3 as readline
-            READLINE_AVAILABLE = True
-        except ImportError:
-            try:
-                import pyreadline as readline
-                READLINE_AVAILABLE = True
-            except ImportError:
-                READLINE_AVAILABLE = False
-                print("Warning: readline not available. Command history and completion disabled.")
-                print("Install pyreadline3 for Windows or ensure readline is available on Unix systems.")
-    except ImportError:
-        READLINE_AVAILABLE = False
-        print("Warning: readline not available. Command history and completion disabled.")
-
-# Configuration file location
-CONFIG_FILE = Path.home() / ".config" / "pd" / "config.json"
 
 
 def main():
@@ -82,6 +51,10 @@ def main():
         interactive_mode(repo)
         return 0
 
+    return handle_cli_command(args, remaining_args, repo)
+
+
+def handle_cli_command(args, remaining_args, repo):
     # Otherwise, handle specific commands
     try:
         if args.command == "list":
@@ -138,18 +111,13 @@ def main():
             output = repo.hydrate(name, template_args, suffix)
             print(output)
 
+            from pd.utils.browser import open_in_browser
             open_in_browser(output)
 
         return 0
     except Exception as e:
         print(f"Error: {str(e)}")
         return 1
-
-
-def open_in_browser(content):
-    url = f"https://github.com/copilot?prompt={content}"
-    import webbrowser
-    webbrowser.open(url)
 
 
 if __name__ == "__main__":

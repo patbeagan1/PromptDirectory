@@ -1,9 +1,8 @@
 import os
 import re
 import subprocess
-import webbrowser
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from git_command_runner import GitCommandRunner
 
@@ -152,6 +151,13 @@ class SnippetRepo:
         for branch in self._list_branches():
             self.get_worktree(branch=branch, sync=True)
             print(f"✅ Synced: {branch}")
+
+    def push(self):
+        worktree_dir = self.get_worktree_dir(self.get_username())
+        self.git.run_in_worktree(worktree_dir, "add", "-A")
+        self.git.run_in_worktree(worktree_dir, "commit", "-am", "Update prompts")
+        self.git.run_in_worktree(worktree_dir, "push", "origin", self.get_username())
+        print(f"Pushed local version of {worktree_dir} to remote.")
 
     def list_snippet_names(self):
         """Print all snippet names."""
