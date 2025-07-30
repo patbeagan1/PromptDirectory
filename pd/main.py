@@ -408,21 +408,23 @@ def get_command_help(command):
         return f"No help available for '{command}'. Type 'help' for a list of commands."
 
 def parse_inline_command(command):
-    pattern = r"^(\w+/?\w*)(?:\s+--(\w+)=\"([^\"]*)\")*(?:\s+--\s+(.*))?$"
-    match = re.match(pattern, command.strip(), re.DOTALL)
-    if not match:
+    # First split on -- to separate main command and suffix
+    parts = command.strip().split(' -- ')
+    main_part = parts[0]
+    suffix = parts[1] if len(parts) > 1 else ''
+
+    # Extract template name and args from main part
+    template_pattern = r'^(\w+/?\w*)'
+    template_match = re.match(template_pattern, main_part)
+    if not template_match:
         raise ValueError("Invalid command format. Use: command [--arg=\"val\"] [-- suffix]")
-    template_name = match.group(1)
+    template_name = template_match.group(1)
 
-    # Parse args from repeated named groups
+    # Parse named arguments
     args = {}
-    matches = re.finditer(r'--(\w+)=\"([^\"]*?)\"', command)
-    for m in matches:
+    arg_matches = re.finditer(r'--(\w+)="([^"]*?)"', main_part)
+    for m in arg_matches:
         args[m.group(1)] = m.group(2)
-
-    # Get suffix after --
-    suffix_match = re.search(r'\s+--\s+(.*?)$', command)
-    suffix = suffix_match.group(1) if suffix_match else ''
 
     return template_name, args, suffix
 
