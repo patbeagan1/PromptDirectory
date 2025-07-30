@@ -11,13 +11,27 @@ from pathlib import Path
 
 from snippet_repo import SnippetRepo
 
-# Try to import readline for command history/completion
+# Import readline with platform-specific handling
 try:
     import readline
-
     READLINE_AVAILABLE = True
 except ImportError:
-    READLINE_AVAILABLE = False
+    try:
+        # For Windows, try to use pyreadline or pyreadline3
+        try:
+            import pyreadline3 as readline
+            READLINE_AVAILABLE = True
+        except ImportError:
+            try:
+                import pyreadline as readline
+                READLINE_AVAILABLE = True
+            except ImportError:
+                READLINE_AVAILABLE = False
+                print("Warning: readline not available. Command history and completion disabled.")
+                print("Install pyreadline3 for Windows or ensure readline is available on Unix systems.")
+    except ImportError:
+        READLINE_AVAILABLE = False
+        print("Warning: readline not available. Command history and completion disabled.")
 
 # Configuration file location
 CONFIG_FILE = Path.home() / ".config" / "pd" / "config.json"
@@ -30,50 +44,74 @@ def setup_readline(repo):
 
     # Define command completer class
     class CommandCompleter:
-        def __init__(self, repo, commands):
+        """Tab completion for the REPL."""
+        def __init__(self, repo):
             self.repo = repo
-            self.commands = commands
-            # Extract command names for first-word completion
-            self.command_names = sorted(list(commands.keys()))
+            self.commands = [
+                "list", "read ", "fork ", "write ", "edit ", "copy ",
+                "new ", "sync", "exit", "help", "help "
+            ]
+            self.command_names = ["list", "read", "fork", "write", "edit", "copy", "new", "sync", "exit", "help"]
             self.current_candidates = []
 
         def complete(self, text, state):
-            # Get the current line and split into words
-            line = readline.get_line_buffer()
-            words = line.split()
+            print(f"completion called {state}::{text}")
+            """Return the state-th completion for text."""
+            if state == 0:  # Generate candidates on first call
+                if not text:
+                    self.current_candidates = self.commands.copy()
+                elif text in ("read ", "fork ", "edit ", "copy "):
+                    # Just started a command that needs snippet completion
+                    try:
+                        snippet_names = self.repo.get_snippet_names() if hasattr(self.repo, 'get_snippet_names') else []
+                        self.current_candidates = [text + snippet for snippet in snippet_names]
+                    except:
+                        print("completion failed.")
+                        self.current_candidates = [text]
+                elif text.startswith("read ") or text.startswith("fork ") or \
+                     text.startswith("edit ") or text.startswith("copy "):
+                    # Already started typing a snippet name
+                    cmd, partial = text.split(" ", 1)
+                    cmd = cmd + " "
+                    try:
+                        snippets = self.repo.get_snippet_names() if hasattr(self.repo, 'get_snippet_names') else []
+                        self.current_candidates = [cmd + snippet for snippet in snippets if snippet.startswith(partial)]
+                    except:
+                        print("completion failed.")
+                        self.current_candidates = []
+                elif text == "help ":
+                    # Complete with command names for help
+                    self.current_candidates = [text + cmd for cmd in self.command_names]
+                elif text.startswith("help "):
+                    # Complete partial command name for help
+                    cmd, partial = text.split(" ", 1)
+                    cmd = cmd + " "
+                    self.current_candidates = [cmd + command for command in self.command_names if command.startswith(partial)]
+                else:
+                    # Complete command names
+                    self.current_candidates = [cmd for cmd in self.commands if cmd.startswith(text)]
 
-            # If we're completing the first word, use command names
-            if not words or (len(words) == 1 and not line.endswith(' ')):
-                self.current_candidates = [cmd for cmd in self.command_names if cmd.startswith(text)]
-            # Otherwise handle command-specific completion
-            else:
-                command = words[0]
-                # For now, just provide simple completion for common commands
-                if command == "help" and len(words) <= 2:
-                    # Complete with available commands for 'help <command>'
-                    self.current_candidates = [cmd for cmd in self.command_names if cmd.startswith(text)]
-                # Add more command-specific completions as needed
+            # Return the state-th candidate, or None if no more candidates
+            return self.current_candidates[state] if state < len(self.current_candidates) else None
 
-            # Return the state-th candidate, or None if we've run out
-            try:
-                return self.current_candidates[state]
-            except IndexError:
-                return None
+    # Set up history file
+    history_file = os.path.expanduser("~/.pd_history")
+    try:
+        readline.read_history_file(history_file)
+        # Set history length
+        readline.set_history_length(1000)
+    except FileNotFoundError:
+        # History file doesn't exist yet
+        pass
 
-    # Set up readline with our completer
+    # Register history save on exit
+    import atexit
+    atexit.register(lambda: readline.write_history_file(history_file))
+
+    # Set up tab completion
+    completer = CommandCompleter(repo)
+    readline.set_completer(completer.complete)
     readline.parse_and_bind("tab: complete")
-    readline.set_completer(CommandCompleter(repo, {
-        "help": "Display help information",
-        "exit": "Exit the application",
-        "list": "List available snippets",
-        "read": "Read a snippet",
-        "write": "Write a snippet",
-        "fork": "Fork a snippet",
-        "edit": "Edit a snippet",
-        "copy": "Copy a snippet",
-        "sync": "Sync with remote",
-        "new": "Create a new snippet",
-    }).complete)
 
 
 def get_general_help():
@@ -254,9 +292,8 @@ def load_config() -> dict:
 def save_config(config: dict):
     """Save configuration to config file"""
     CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    if 'prompt_repo' in config:
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump({"prompt_repo": config['prompt_repo']}, f, indent=2)
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config, f, indent=2)
 
 
 def interactive_mode(repo):
