@@ -5,7 +5,7 @@ import os
 
 from pd.utils.config import load_config, save_config
 from pd.utils.ssh import setup_ssh_agent
-from snippet_repo import SnippetRepo
+from pd.utils.snippet_repo import SnippetRepo
 
 
 def main():

@@ -10,13 +10,6 @@ uv install pd
 
 ## Usage
 
-### Configuration
-
-```bash
-# Configure pd with your settings
-pd --config
-```
-
 ### Interactive Mode
 
 ```bash
@@ -25,12 +18,6 @@ pd
 
 # Run with specific repository
 pd --repo username/repository
-
-# Run with specific username
-pd --username yourname
-
-# Save output to a file
-pd --output answer.txt
 
 # Skip SSH agent setup
 pd --no-ssh
@@ -46,13 +33,13 @@ pd list
 pd read user/snippet
 
 # Write content to a snippet
-pd write myuser/snippet --content "Your content here"
+pd write snippet --content "Your content here"
 
 # Fork a snippet from another user
-pd fork otheruser/snippet
+pd fork user/snippet
 
 # Edit a snippet in your default editor
-pd edit myuser/snippet
+pd edit snippet
 
 # Copy a snippet to clipboard
 pd copy user/snippet
@@ -77,8 +64,6 @@ PD stores its configuration in `~/.config/pd/config.json`. You can edit this fil
 Main configuration options:
 
 - `prompt_repo`: GitHub repository containing prompts (format: `username/repository`)
-- `username`: Your username for the prompt system
-- `output_file`: Default file to save answers to
 
 ## SSH Keys
 
