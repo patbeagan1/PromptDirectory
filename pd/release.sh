@@ -18,7 +18,7 @@ if [ -f dist ]; then
   rm -r dist
 fi
 
-if [ -n "$PYPI_TOKEN" ]; then
+if [ -z "$PYPI_TOKEN" ]; then
   echo "Please set token"
 fi
 
