@@ -57,7 +57,7 @@ def get_command_help(command):
         Description: Write content to a snippet in your branch.
         The address format is 'yourusername/snippet'.
 
-        Example: write myuser/greeting --content "Hello, world!"
+        Example: write greeting --content "Hello, world!"
         """,
 
         "fork": """
@@ -73,7 +73,7 @@ def get_command_help(command):
         Description: Open a snippet in your default editor.
         The address format is 'user/snippet'.
 
-        Example: edit myuser/greeting
+        Example: edit greeting
         """,
 
         "copy": """
