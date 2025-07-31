@@ -18,6 +18,7 @@ def cli():
     parser.add_argument('--no-ssh', action='store_true', help='Skip SSH agent setup')
     parser.add_argument('--base-dir', default="~/.git_worktree_cache", help='Local cache directory')
     parser.add_argument('--history', action="store_true", help='Whether to use saved command history')
+    parser.add_argument('--browser', action="store_true", help='Whether to open hydrated templates in copilot chat')
 
     # Command options (similar to subcommands)
     parser.add_argument('command', nargs='?', help='Command to execute (read, write, list, etc.)')
@@ -49,7 +50,7 @@ def cli():
     # If no command is provided, run in interactive mode
     if not args.command:
         from promptdir.repl import interactive_mode
-        interactive_mode(repo, args.history)
+        interactive_mode(repo, args.history, args.browser)
         return 0
 
     return handle_cli_command(args, remaining_args, repo)
@@ -112,11 +113,11 @@ def handle_cli_command(args, remaining_args, repo):
             output = repo.hydrate(name, template_args, suffix)
             print(output)
 
-            from promptdir.utils.browser import open_in_browser
-            open_in_browser(output)
+            if args.browser:
+                from promptdir.utils.browser import open_in_browser
+                open_in_browser(output)
 
         return 0
     except Exception as e:
         print(f"Error: {str(e)}")
         return 1
-

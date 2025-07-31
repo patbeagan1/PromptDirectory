@@ -180,7 +180,6 @@ def setup_readline(repo, history: bool):
     readline.parse_and_bind("tab: complete")
 
 
-
 def parse_inline_command(command):
     # First split on -- to separate main command and suffix
     parts = command.strip().split(' -- ')
@@ -203,7 +202,7 @@ def parse_inline_command(command):
     return template_name, args, suffix
 
 
-def interactive_mode(repo, history: bool):
+def interactive_mode(repo, history: bool, browser: bool):
     """Run the interactive REPL mode"""
     # Set up readline if available
     setup_readline(repo, history)
@@ -288,8 +287,9 @@ def interactive_mode(repo, history: bool):
             print("\"\"\"")
             print()
 
-            print("Opening in browser 🌐")
-            open_in_browser(output)
+            if browser:
+                print("Opening in browser 🌐")
+                open_in_browser(output)
         except KeyboardInterrupt:
             print()
             print("Exiting...")
