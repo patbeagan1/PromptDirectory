@@ -18,12 +18,16 @@ if [ -f dist ]; then
   rm -r dist
 fi
 
+if [ -z "$PYPI_TOKEN" ]; then
+  echo "Please set token"
+fi
+
 function main() {
   threeflow -r rs
   uv version --bump minor
   git commit -am "updating version"
   uv build
-  uv publish
+  uv publish --username __token__ --password "$PYPI_TOKEN"
   threeflow -r rf
 }
 
