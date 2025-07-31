@@ -14,7 +14,7 @@ if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
   return 1
 fi
 
-if [ -f dist ]; then
+if [ -d dist ]; then
   rm -r dist
 fi
 
