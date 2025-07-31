@@ -11,18 +11,23 @@ def get_help():
     help <command>        Display detailed help for a specific command
     exit                  Exit the application
 
+    new <filename>        Create a new prompt file
     list                  List all available snippets
+    
     read <user/snippet>   Read a snippet from a user's branch
     write <snippet> --content <content>  
-                              Write content to a snippet. 
-                              It assumes the current user's branch.
+                          Write content to a snippet. 
+                          It assumes the current user's branch.
+    
     fork <user/snippet>   Copy a snippet from another user to your branch
-    edit <user/snippet>   Open a snippet in your default editor
+    edit <snippet>        Open a snippet in your default editor
     copy <user/snippet>   Copy a snippet to your clipboard
+    
     sync                  Synchronize all branches with remote repository
-    new <filename>        Create a new prompt file
-
+    
     For more detailed help on any command, type 'help <command>'.
+    
+    Or visit the readme: https://github.com/patbeagan1/PromptDirectory
     """
 
 def get_command_help(command):
