@@ -1,4 +1,5 @@
-#1/usr/bin/env zsh
+#!/usr/bin/env zsh
+
 set -euo pipefail
 
 rm -r dist
