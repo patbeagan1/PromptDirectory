@@ -3,14 +3,13 @@
 import os
 import re
 import traceback
-from os.path import expanduser
-from pathlib import Path
 
 from promptdir.commands import (
     list_snippets, read_snippet, write_snippet, fork_snippet,
     edit_snippet, copy_snippet, sync_all, create_new_prompt,
     get_help, get_command_help
 )
+from promptdir.commands.copy_cmd import parse_copy_args
 from promptdir.utils.browser import open_in_browser
 
 # Import readline with platform-specific handling
@@ -39,7 +38,7 @@ except ImportError:
         print("Warning: readline not available. Command history and completion disabled.")
 
 
-def setup_readline(repo):
+def setup_readline(repo, history: bool):
     """Set up readline for command history and tab completion"""
     if not READLINE_AVAILABLE:
         return
@@ -158,19 +157,22 @@ def setup_readline(repo):
             else:
                 return None
 
-    # Set up history file
-    history_file = os.path.expanduser("~/pd_history")
-    try:
-        readline.read_history_file(history_file)
-        # Set history length
-        readline.set_history_length(1000)
-    except FileNotFoundError:
-        # History file doesn't exist yet
-        pass
+    if history:
+        # Set up history file
+        history_file = os.path.expanduser("~/pd_history")
+        try:
+            readline.read_history_file(history_file)
+            # Set history length
+            readline.set_history_length(1000)
+        except FileNotFoundError:
+            # History file doesn't exist yet
+            pass
+        except PermissionError:
+            pass
 
-    # Register history save on exit
-    import atexit
-    atexit.register(lambda: readline.write_history_file(history_file))
+        # Register history save on exit
+        import atexit
+        atexit.register(lambda: readline.write_history_file(history_file))
 
     # Set up tab completion
     completer = CommandCompleter(repo)
@@ -201,10 +203,10 @@ def parse_inline_command(command):
     return template_name, args, suffix
 
 
-def interactive_mode(repo, username=None):
+def interactive_mode(repo, history: bool):
     """Run the interactive REPL mode"""
     # Set up readline if available
-    setup_readline(repo)
+    setup_readline(repo, history)
 
     print("Prompt Directory REPL. Type 'help' for available commands.")
     while True:
@@ -271,14 +273,14 @@ def interactive_mode(repo, username=None):
             # New command
             elif cmd.startswith("new ") or cmd.startswith("n "):
                 _, filename = cmd.split(maxsplit=1)
-                current_username = username or repo.get_username()
+                current_username = repo.get_username()
                 create_new_prompt(repo, filename)
                 continue
 
             # Default case, handle as template hydration
             name, args, suffix = parse_inline_command(cmd)
             if "/" not in name:
-                current_username = username or repo.get_username()
+                current_username = repo.get_username()
                 name = f"{current_username}/{name}"
             output = repo.hydrate(name, args, suffix)
             print("\"\"\"")

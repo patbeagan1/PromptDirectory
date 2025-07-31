@@ -17,6 +17,7 @@ def cli():
     parser.add_argument('--repo', help='Specify prompt repository (e.g. username/repo)')
     parser.add_argument('--no-ssh', action='store_true', help='Skip SSH agent setup')
     parser.add_argument('--base-dir', default="~/.git_worktree_cache", help='Local cache directory')
+    parser.add_argument('--history', action="store_true", help='Whether to use saved command history')
 
     # Command options (similar to subcommands)
     parser.add_argument('command', nargs='?', help='Command to execute (read, write, list, etc.)')
@@ -48,7 +49,7 @@ def cli():
     # If no command is provided, run in interactive mode
     if not args.command:
         from promptdir.repl import interactive_mode
-        interactive_mode(repo)
+        interactive_mode(repo, args.history)
         return 0
 
     return handle_cli_command(args, remaining_args, repo)
