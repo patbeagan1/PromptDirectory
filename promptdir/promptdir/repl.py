@@ -202,7 +202,7 @@ def parse_inline_command(command):
     return template_name, args, suffix
 
 
-def interactive_mode(repo, history: bool, browser: bool):
+def interactive_mode(repo, history: bool, browser: bool, ollama: bool):
     """Run the interactive REPL mode"""
     # Set up readline if available
     setup_readline(repo, history)
@@ -211,6 +211,9 @@ def interactive_mode(repo, history: bool, browser: bool):
     while True:
         try:
             cmd = input("> ").strip()
+            if not cmd:
+                continue
+            
             # Exit commands
             if cmd == "exit" or cmd == "q":
                 break
@@ -290,6 +293,11 @@ def interactive_mode(repo, history: bool, browser: bool):
             if browser:
                 print("Opening in browser 🌐")
                 open_in_browser(output)
+            
+            if ollama:
+                from promptdir.utils.ollama_runner import run_ollama_prompt
+                run_ollama_prompt(output)
+
         except KeyboardInterrupt:
             print()
             print("Exiting...")

@@ -19,6 +19,7 @@ def cli():
     parser.add_argument('--base-dir', default="~/.git_worktree_cache", help='Local cache directory')
     parser.add_argument('--history', action="store_true", help='Whether to use saved command history')
     parser.add_argument('--browser', action="store_true", help='Whether to open hydrated templates in copilot chat')
+    parser.add_argument('--ollama', action="store_true", help='Send the hydrated prompt to Ollama')
 
     # Command options (similar to subcommands)
     parser.add_argument('command', nargs='?', help='Command to execute (read, write, list, etc.)')
@@ -50,7 +51,7 @@ def cli():
     # If no command is provided, run in interactive mode
     if not args.command:
         from promptdir.repl import interactive_mode
-        interactive_mode(repo, args.history, args.browser)
+        interactive_mode(repo, args.history, args.browser, args.ollama)
         return 0
 
     return handle_cli_command(args, remaining_args, repo)
@@ -116,6 +117,10 @@ def handle_cli_command(args, remaining_args, repo):
             if args.browser:
                 from promptdir.utils.browser import open_in_browser
                 open_in_browser(output)
+            
+            if args.ollama:
+                from promptdir.utils.ollama_runner import run_ollama_prompt
+                run_ollama_prompt(output)
 
         return 0
     except Exception as e:
