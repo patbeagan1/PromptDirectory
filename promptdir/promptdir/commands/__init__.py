@@ -9,6 +9,9 @@ from promptdir.commands.copy_cmd import copy_snippet
 from promptdir.commands.sync_cmd import sync_all
 from promptdir.commands.new_cmd import create_new_prompt
 from promptdir.commands.help_cmd import get_help, get_command_help
+from promptdir.commands.delete_cmd import delete_snippet
+from promptdir.commands.search_cmd import search_snippets
+from promptdir.commands.rename_cmd import rename_snippet
 
 __all__ = [
     'list_snippets',
@@ -21,4 +24,7 @@ __all__ = [
     'create_new_prompt',
     'get_help',
     'get_command_help',
+    'delete_snippet',
+    'search_snippets',
+    'rename_snippet',
 ]

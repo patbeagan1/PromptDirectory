@@ -7,7 +7,7 @@ import traceback
 from promptdir.commands import (
     list_snippets, read_snippet, write_snippet, fork_snippet,
     edit_snippet, copy_snippet, sync_all, create_new_prompt,
-    get_help, get_command_help
+    get_help, get_command_help, delete_snippet, search_snippets, rename_snippet
 )
 from promptdir.commands.copy_cmd import parse_copy_args
 from promptdir.utils.browser import open_in_browser
@@ -51,7 +51,7 @@ def setup_readline(repo, history: bool):
             self.repo = repo
 
             # Define command names without spaces
-            self.command_names = ["list", "read", "fork", "write", "edit", "copy", "new", "sync", "exit", "help"]
+            self.command_names = ["list", "read", "fork", "write", "edit", "copy", "new", "sync", "exit", "help", "delete", "search", "rename"]
             self.command_aliases = {
                 "list": ["ls", "l"],
                 "read": ["r"],
@@ -62,7 +62,10 @@ def setup_readline(repo, history: bool):
                 "new": ["n"],
                 "sync": ["s"],
                 "exit": ["q"],
-                "help": ["h", "?"]
+                "help": ["h", "?"],
+                "delete": ["del", "rm"],
+                "search": ["grep", "find"],
+                "rename": ["mv", "move"],
             }
 
             # Create all command names (no spaces)
@@ -71,7 +74,7 @@ def setup_readline(repo, history: bool):
                 self.all_command_names.extend(aliases)
 
             # Commands that need snippet completion
-            self.snippet_commands = ["read", "r", "fork", "edit", "e", "copy", "c"]
+            self.snippet_commands = ["read", "r", "fork", "edit", "e", "copy", "c", "delete", "del", "rm", "rename", "mv", "move"]
 
             # Current completion candidates
             self.current_candidates = []
@@ -277,6 +280,24 @@ def interactive_mode(repo, history: bool, browser: bool, ollama: bool):
                 _, filename = cmd.split(maxsplit=1)
                 current_username = repo.get_username()
                 create_new_prompt(repo, filename)
+                continue
+
+            # Delete command
+            elif cmd.startswith("delete ") or cmd.startswith("del "):
+                address = cmd.split(maxsplit=1)[1]
+                delete_snippet(repo, address)
+                continue
+
+            # Search command
+            elif cmd.startswith("search "):
+                query = cmd.split(maxsplit=1)[1]
+                search_snippets(repo, query)
+                continue
+
+            # Rename command
+            elif cmd.startswith("rename "):
+                _, source, dest = cmd.split()
+                rename_snippet(repo, source, dest)
                 continue
 
             # Default case, handle as template hydration

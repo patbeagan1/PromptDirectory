@@ -87,6 +87,12 @@ def handle_cli_command(args, remaining_args, repo):
                         hydrate_args[key] = value
 
             repo.copy_snippet(args.address, hydrate_args)
+        elif args.command == "delete" and args.address:
+            repo.delete_snippet(args.address)
+        elif args.command == "search" and args.address:
+            repo.search_snippets(args.address)
+        elif args.command == "rename" and args.address and args.content:
+            repo.rename_snippet(args.address, args.content)
         else:
             # Try to handle as template hydration
             name = args.command

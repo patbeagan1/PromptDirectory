@@ -332,9 +332,72 @@ class SnippetRepo:
         self.template_manager.cached_templates.clear()
         self._generate_map_of_snippet_names_to_content()
 
+    def delete_snippet(self, address):
+        """Delete a snippet from the user's branch."""
+        user, snippet = address.split("/")
+        if self.get_username() != user:
+            raise PermissionError(f"❌ Cannot delete from another user's branch: {user}")
+
+        worktree = self.get_worktree(user)
+        snippet_path = worktree / "prompts" / f"{snippet}.prompt.md"
+
+        if not snippet_path.exists():
+            raise FileNotFoundError(f"❌ Snippet not found: {address}")
+
+        snippet_path.unlink()
+
+        self.git.run_in_worktree(worktree, "add", str(snippet_path))
+        self.git.run_in_worktree(worktree, "commit", "-m", f"Delete snippet: {snippet}")
+        self.git.run_in_worktree(worktree, "push", "origin", user)
+        print(f"✅ Deleted snippet: {address}")
+
+        self.load_templates()
+
     def hydrate(self, template_name, args, suffix=""):
         """Fill template with provided arguments."""
         return self.template_manager.hydrate(template_name, args, suffix)
+
+    def search_snippets(self, query):
+        """Search for a query in all snippets."""
+        snippets = self._generate_map_of_snippet_names_to_content()
+        found = False
+        for name, content in snippets.items():
+            lines = content.splitlines()
+            for i, line in enumerate(lines):
+                if query in line:
+                    found = True
+                    print(f"{name}:{i + 1}: {line.strip()}")
+        if not found:
+            print(f"No results found for '{query}'")
+
+    def rename_snippet(self, source_address, destination_address):
+        """Rename a snippet."""
+        if "/" in source_address or "/" in destination_address:
+            raise ValueError(
+                "Source and destination addresses cannot contain slashes. "
+                "You may only rename snippets in the current user's branch.")
+        source_snippet = source_address
+        dest_snippet = destination_address
+        source_user = self.get_username()
+
+        worktree = self.get_worktree(source_user)
+        source_path = worktree / "prompts" / f"{source_snippet}.prompt.md"
+        dest_path = worktree / "prompts" / f"{dest_snippet}.prompt.md"
+
+        if not source_path.exists():
+            raise FileNotFoundError(f"❌ Snippet not found: {source_address}")
+
+        if dest_path.exists():
+            raise FileExistsError(f"❌ Snippet already exists: {destination_address}")
+
+        source_path.rename(dest_path)
+
+        self.git.run_in_worktree(worktree, "add", str(source_path), str(dest_path))
+        self.git.run_in_worktree(worktree, "commit", "-m", f"Rename snippet: {source_snippet} to {dest_snippet}")
+        self.git.run_in_worktree(worktree, "push", "origin", source_user)
+        print(f"✅ Renamed snippet: {source_address} to {destination_address}")
+
+        self.load_templates()
 
     def create_new_prompt_file(self, template_dir, filename):
         """Create new prompt file interactively."""

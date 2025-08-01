@@ -25,6 +25,10 @@ def get_help():
     
     sync                  Synchronize all branches with remote repository
     
+    delete <user/snippet> Delete a snippet from your branch
+    search <query>        Search for a query in all snippets
+    rename <source> <dest> Rename a snippet
+
     For more detailed help on any command, type 'help <command>'.
     
     Or visit the readme: https://github.com/patbeagan1/PromptDirectory
@@ -101,7 +105,22 @@ def get_command_help(command):
         "exit": """
         Usage: exit
         Description: Exit the application.
-        """
+        """,
+
+        "delete": """
+        Usage: delete <user/snippet>
+        Description: Deletes a snippet from your branch.
+        The address format is 'yourusername/snippet'.
+
+        Example: delete myusername/greeting
+        """,
+
+        "search": """
+        Usage: search <query>
+        Description: Searches for a query in all snippets.
+
+        Example: search "hello world"
+        """,
     }
 
     if command in help_texts:
