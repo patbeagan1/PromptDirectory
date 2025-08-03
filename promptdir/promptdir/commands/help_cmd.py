@@ -2,9 +2,15 @@
 
 import textwrap
 
-def get_help():
-    """Return general help text"""
-    return """
+def get_help(mode='prompt'):
+    """Return general help text based on the current mode."""
+    mode_specific_help = ""
+    if mode == 'script':
+        mode_specific_help = "\n    run <user/script> [args] Run a script"
+    elif mode == 'prompt':
+        mode_specific_help = "\n    <user/prompt> [args]  Hydrate a prompt with arguments."
+
+    return f"""
     Available commands:
 
     help                  Display this help information
@@ -28,8 +34,7 @@ def get_help():
     
     delete <user/item>    Delete an item from your branch
     search <query>        Search for a query in all items
-    rename <source> <dest> Rename an item
-    run <user/script> [args] Run a script
+    rename <source> <dest> Rename an item{mode_specific_help}
 
     For more detailed help on any command, type 'help <command>'.
     

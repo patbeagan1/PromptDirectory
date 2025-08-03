@@ -158,7 +158,7 @@ def interactive_mode(repo, history: bool, browser: bool, ollama: bool):
             if command in ["exit", "q"]:
                 break
             elif command in ["help", "h", "?"]:
-                print(get_command_help(args[0]) if args else get_help())
+                print(get_command_help(args[0]) if args else get_help(repo_type))
             elif command == "use" and args:
                 new_type = args[0]
                 if new_type in ['prompt', 'snippet', 'script']:
