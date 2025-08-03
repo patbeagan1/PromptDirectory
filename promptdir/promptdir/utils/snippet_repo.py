@@ -107,6 +107,20 @@ class BaseRepo:
         self._ensure_bare_repo()
         self.cached_items = self._generate_map_of_item_names_to_content()
 
+    def _check_shebang(self, item_path):
+        """Check for shebang and warn if not present."""
+        if not isinstance(self, ScriptRepo):
+            return True  # Not a script, so no check needed
+
+        with open(item_path, 'r', encoding='utf-8') as f:
+            first_line = f.readline()
+            if not first_line.startswith("#!"):
+                print(f"Warning: Script '{item_path.name}' does not have a shebang (e.g., #!/bin/bash).")
+                print("Proceed anyway? [y/N]")
+                if input("> ").lower() != "y":
+                    return False
+        return True
+
     def ensure_self_branch(self):
         """Ensure user has their own branch with the content directory."""
         worktree_dir = self.get_worktree_dir(self.get_username())
@@ -274,6 +288,11 @@ class BaseRepo:
         content_after = item_path.read_text(encoding="utf-8")
 
         if content_before != content_after:
+            if isinstance(self, ScriptRepo) and not self._check_shebang(item_path):
+                print("Aborting edit. Changes have been reverted.")
+                item_path.write_text(content_before, encoding="utf-8")
+                return
+
             self.git.run_in_worktree(worktree, "add", str(item_path))
             self.git.run_in_worktree(worktree, "commit", "-m", f"Edit {self.item_name_singular}: {item}")
             self.git.run_in_worktree(worktree, "push", "origin", user)
@@ -397,6 +416,10 @@ class BaseRepo:
         full_path.write_text("\n".join(content).strip() + "\n", encoding="utf-8")
 
         if isinstance(self, ScriptRepo):
+            if not self._check_shebang(full_path):
+                print("Aborting creation.")
+                full_path.unlink()
+                return
             full_path.chmod(0o755)
         else:
             full_path.chmod(0o644)
@@ -472,6 +495,10 @@ class ScriptRepo(BaseRepo):
         item_path = self.get_worktree(user) / self.content_dir / item_name
         if not item_path.exists():
             raise FileNotFoundError(f"❌ Script not found: {address}")
+
+        if not self._check_shebang(item_path):
+            print("Aborting execution.")
+            return
 
         # Ensure script is executable
         os.chmod(item_path, 0o755)
