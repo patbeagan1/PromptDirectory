@@ -5,13 +5,13 @@ import os
 
 from promptdir.utils.config import load_config, save_config
 from promptdir.utils.ssh import setup_ssh_agent
-from promptdir.utils.snippet_repo import SnippetRepo
+from promptdir.utils.snippet_repo import PromptRepo, SnippetRepo, ScriptRepo
 
 
 def cli():
     """Main entry point for the promptdir command"""
     # Define merged argument parser
-    parser = argparse.ArgumentParser(description="Prompt Directory - Manage GitHub-based prompts")
+    parser = argparse.ArgumentParser(description="Prompt Directory - Manage GitHub-based prompts, snippets, and scripts")
 
     # Configuration options
     parser.add_argument('--repo', help='Specify prompt repository (e.g. username/repo)')
@@ -20,10 +20,12 @@ def cli():
     parser.add_argument('--history', action="store_true", help='Whether to use saved command history')
     parser.add_argument('--browser', action="store_true", help='Whether to open hydrated templates in copilot chat')
     parser.add_argument('--ollama', action="store_true", help='Send the hydrated prompt to Ollama')
+    parser.add_argument('--type', choices=['prompt', 'snippet', 'script'], default='prompt',
+                        help='Specify the content type to work with.')
 
     # Command options (similar to subcommands)
     parser.add_argument('command', nargs='?', help='Command to execute (read, write, list, etc.)')
-    parser.add_argument('address', nargs='?', help='Snippet address in user/snippet format')
+    parser.add_argument('address', nargs='?', help='Item address in user/item format')
     parser.add_argument('--content', help='Content for write command')
 
     args, remaining_args = parser.parse_known_args()
@@ -44,8 +46,15 @@ def cli():
     if not args.no_ssh:
         setup_ssh_agent()
 
-    # Initialize the repository
-    repo = SnippetRepo(prompt_repo, base_dir=base_dir)
+    # Initialize the repository based on type
+    repo = None
+    if args.type == 'prompt':
+        repo = PromptRepo(prompt_repo, base_dir=base_dir)
+    elif args.type == 'snippet':
+        repo = SnippetRepo(prompt_repo, base_dir=base_dir)
+    elif args.type == 'script':
+        repo = ScriptRepo(prompt_repo, base_dir=base_dir)
+
     repo.ensure_self_branch()
 
     # If no command is provided, run in interactive mode
@@ -61,23 +70,22 @@ def handle_cli_command(args, remaining_args, repo):
     # Otherwise, handle specific commands
     try:
         if args.command == "list":
-            repo.list_snippet_names()
+            repo.list_item_names()
         elif args.command == "read" and args.address:
-            repo.read_snippet(args.address)
+            repo.read_item(args.address)
         elif args.command == "write" and args.address and args.content:
-            repo.write_snippet(args.address, args.content)
+            repo.write_item(args.address, args.content)
         elif args.command == "fork" and args.address:
-            repo.fork_snippet(args.address)
+            repo.fork_item(args.address)
         elif args.command == "edit" and args.address:
-            repo.edit_snippet(args.address)
+            repo.edit_item(args.address)
         elif args.command == "sync":
             repo.sync_all()
         elif args.command == "new" and args.address:  # Using address parameter for filename
-            repo.create_new_prompt_file(repo.get_worktree(repo.get_username()), args.address)
+            repo.create_new_file(repo.get_worktree(repo.get_username()), args.address)
         elif args.command == "copy" and args.address:
-            # Handle copying with optional hydration
             hydrate_args = None
-            if "--hydrate" in remaining_args:
+            if args.type == 'prompt' and "--hydrate" in remaining_args:
                 hydrate_args = {}
                 # Parse any key-value args from remaining_args
                 for i, arg in enumerate(remaining_args):
@@ -85,15 +93,16 @@ def handle_cli_command(args, remaining_args, repo):
                         key = arg[2:]
                         value = remaining_args[i + 1]
                         hydrate_args[key] = value
-
-            repo.copy_snippet(args.address, hydrate_args)
+            repo.copy_item(args.address, hydrate_args)
         elif args.command == "delete" and args.address:
-            repo.delete_snippet(args.address)
+            repo.delete_item(args.address)
         elif args.command == "search" and args.address:
-            repo.search_snippets(args.address)
+            repo.search_items(args.address)
         elif args.command == "rename" and args.address and args.content:
-            repo.rename_snippet(args.address, args.content)
-        else:
+            repo.rename_item(args.address, args.content)
+        elif args.command == "run" and args.address and isinstance(repo, ScriptRepo):
+            repo.run(args.address, remaining_args)
+        elif args.type == 'prompt':
             # Try to handle as template hydration
             name = args.command
             username = repo.get_username()
@@ -123,10 +132,13 @@ def handle_cli_command(args, remaining_args, repo):
             if args.browser:
                 from promptdir.utils.browser import open_in_browser
                 open_in_browser(output)
-            
+
             if args.ollama:
                 from promptdir.utils.ollama_runner import run_ollama_prompt
                 run_ollama_prompt(output)
+        else:
+            print(f"Invalid command or arguments for type '{args.type}'.")
+            return 1
 
         return 0
     except Exception as e:

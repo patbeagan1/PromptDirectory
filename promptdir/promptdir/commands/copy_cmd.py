@@ -1,24 +1,23 @@
-"""Copy command implementation."""
-
 import re
+from promptdir.utils.snippet_repo import PromptRepo
 
-def copy_snippet(repo, address, args=None, hydrate=False):
-    """Copy a snippet to the clipboard.
+def copy_item(repo, address, args=None, hydrate=False):
+    """Copy an item to the clipboard.
 
     Args:
-        repo: The snippet repository
-        address: Snippet address in user/snippet format
+        repo: The repository instance
+        address: Item address in user/item format
         args: Optional arguments for hydration
         hydrate: Whether to process template variables
     """
     if not address:
-        raise ValueError("Usage: copy <user/snippet> [--hydrate --arg1=\"value1\" --arg2=\"value2\" -- suffix]")
+        raise ValueError("Usage: copy <user/item> [--hydrate --arg1=\"value1\" --arg2=\"value2\" -- suffix]")
 
-    if hydrate:
+    if isinstance(repo, PromptRepo) and hydrate:
         hydrate_args = args or {}
-        repo.copy_snippet(address, hydrate_args)
+        repo.copy_item(address, hydrate_args)
     else:
-        repo.copy_snippet(address)
+        repo.copy_item(address)
 
 def parse_copy_args(cmd):
     """Parse copy command arguments.
@@ -39,7 +38,7 @@ def parse_copy_args(cmd):
         should_hydrate = True
 
         # Parse named arguments
-        arg_matches = re.finditer(r'--([\w-]+)="([^"]*?)"', cmd)
+        arg_matches = re.finditer(r'--([\w-]+)=\"([^\"]*?)\"', cmd)
         for m in arg_matches:
             arg_name = m.group(1)
             if arg_name != "hydrate":  # Skip the --hydrate flag

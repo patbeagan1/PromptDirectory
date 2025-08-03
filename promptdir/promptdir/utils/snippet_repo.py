@@ -64,7 +64,7 @@ class TemplateManager:
             raise ValueError(f"Template '{template_name}' not found.")
 
         template = self.cached_templates[template_name]
-        placeholders = re.findall(r"\{(.*?)}", template)
+        placeholders = re.findall(r"{(.*?)}", template)
 
         missing = [key for key in placeholders if key not in args]
         if missing:
@@ -87,10 +87,10 @@ class TemplateManager:
         return template
 
 
-class SnippetRepo:
-    """Manages a Git repository containing prompt snippets using worktrees."""
+class BaseRepo:
+    """Manages a Git repository containing content items using worktrees."""
 
-    def __init__(self, repo_slug, base_dir="~/.git_worktree_cache"):
+    def __init__(self, repo_slug, content_dir, file_suffix, item_name_singular, base_dir="~/.git_worktree_cache"):
         self.repo_slug = repo_slug  # e.g. myorg/myrepo
         self.repo_url = f"git@github.com:{repo_slug}.git/"
         self.repo_name = repo_slug.replace("/", "_")
@@ -98,21 +98,24 @@ class SnippetRepo:
         self.bare_repo_path = self.base_dir / f"{self.repo_name}.bare"
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
+        self.content_dir = content_dir
+        self.file_suffix = file_suffix
+        self.item_name_singular = item_name_singular
+
         self.git = GitCommandRunner(self.bare_repo_path)
-        self.template_manager = TemplateManager()
 
         self._ensure_bare_repo()
-        self._generate_map_of_snippet_names_to_content()
+        self.cached_items = self._generate_map_of_item_names_to_content()
 
     def ensure_self_branch(self):
-        """Ensure user has their own branch with prompts directory."""
+        """Ensure user has their own branch with the content directory."""
         worktree_dir = self.get_worktree_dir(self.get_username())
         if not worktree_dir.exists():
             self.git.run_repo_cmd("branch", self.get_username())
             worktree_dir = self.get_worktree(self.get_username())
 
-        dir_prompts = worktree_dir / "prompts"
-        os.makedirs(dir_prompts, exist_ok=True)
+        content_path = worktree_dir / self.content_dir
+        os.makedirs(content_path, exist_ok=True)
 
     def _ensure_bare_repo(self):
         """Clone bare repo if it doesn't exist."""
@@ -155,213 +158,183 @@ class SnippetRepo:
     def push(self):
         worktree_dir = self.get_worktree_dir(self.get_username())
         self.git.run_in_worktree(worktree_dir, "add", "-A")
-        self.git.run_in_worktree(worktree_dir, "commit", "-am", "Update prompts")
+        self.git.run_in_worktree(worktree_dir, "commit", "-am", f"Update {self.content_dir}")
         self.git.run_in_worktree(worktree_dir, "push", "origin", self.get_username())
         print(f"Pushed local version of {worktree_dir} to remote.")
 
-    def list_snippet_names(self):
-        """Print all snippet names."""
-        snippets = self.get_snippet_names()
-        for snippet in snippets:
-            print(snippet)
+    def list_item_names(self):
+        """Print all item names."""
+        items = self.get_item_names()
+        for item in items:
+            print(item)
         print("∴")
 
-    def get_snippet_names(self):
-        """Get all snippet names as a list."""
+    def get_item_names(self):
+        """Get all item names as a list."""
         username = self.get_username()
-        user_snippets = []
-        other_snippets = []
+        user_items = []
+        other_items = []
         for branch in self._list_branches():
             worktree = self.get_worktree(branch)
-            prompts_dir = worktree / "prompts"
-            if prompts_dir.exists():
-                for file in prompts_dir.glob("*.prompt.md"):
-                    branch_name = "" if branch == username else f"{branch}/"
-                    snippet = f"{branch_name}{file.name[:-10]}"  # 10 for chars in ".prompt.md"
-                    if branch == username:
-                        user_snippets.append(snippet)
-                    else:
-                        other_snippets.append(snippet)
-        user_snippets.sort()
-        other_snippets.sort()
-        return user_snippets + other_snippets
+            content_path = worktree / self.content_dir
+            if content_path.exists():
+                for file in content_path.glob(f"*{self.file_suffix}"):
+                    if file.is_file():
+                        branch_name = "" if branch == username else f"{branch}/"
+                        item = f"{branch_name}{file.name.removesuffix(self.file_suffix)}"
+                        if branch == username:
+                            user_items.append(item)
+                        else:
+                            other_items.append(item)
+        user_items.sort()
+        other_items.sort()
+        return user_items + other_items
 
-    def _generate_map_of_snippet_names_to_content(self):
-        """Load all snippets into cache."""
-        if self.template_manager.cached_templates:
-            return self.template_manager.cached_templates
-
+    def _generate_map_of_item_names_to_content(self):
+        """Load all items into cache."""
         result = {}
         for branch in self._list_branches():
             worktree = self.get_worktree(branch)
-            prompts_dir = worktree / "prompts"
-            if prompts_dir.exists():
-                for file in prompts_dir.glob("*.prompt.md"):
-                    snippet_name = file.name[:-10]
-                    result[f"{branch}/{snippet_name}"] = file.read_text(encoding="utf-8")
-
-        self.template_manager.load_templates(result)
+            content_path = worktree / self.content_dir
+            if content_path.exists():
+                for file in content_path.glob(f"*{self.file_suffix}"):
+                    if file.is_file():
+                        item_name = file.name.removesuffix(self.file_suffix)
+                        result[f"{branch}/{item_name}"] = file.read_text(encoding="utf-8")
+        self.cached_items = result
         return result
 
-    def read_snippet(self, address):
-        """Print snippet contents."""
+    def read_item(self, address):
+        """Print item contents."""
         user = address.split("/")[0] if "/" in address else self.get_username()
-        snippet = address.split("/")[-1]
-        snippet_path = self.get_worktree(user) / "prompts" / f"{snippet}.prompt.md"
-        if not snippet_path.exists():
-            raise FileNotFoundError(f"❌ Snippet not found: {address}")
-        print(snippet_path.read_text(encoding="utf-8"))
+        item = address.split("/")[-1]
+        item_path = self.get_worktree(user) / self.content_dir / f"{item}{self.file_suffix}"
+        if not item_path.exists():
+            raise FileNotFoundError(f"❌ {self.item_name_singular.capitalize()} not found: {address}")
+        print(item_path.read_text(encoding="utf-8"))
 
-    def fork_snippet(self, address, target_user=None):
-        """Fork a snippet from another user's branch to the current user's branch."""
+    def fork_item(self, address, target_user=None):
+        """Fork an item from another user's branch to the current user's branch."""
         try:
-            source_user, snippet = address.split("/")
+            source_user, item = address.split("/")
         except ValueError:
-            print("Address must be in the form \"user/snippet\"")
+            print(f"Address must be in the form \"user/{self.item_name_singular}\"")
             return
 
         target_user = target_user or self.get_username()
 
-        # Get source snippet path
-        source_path = self.get_worktree(source_user) / "prompts" / f"{snippet}.prompt.md"
+        source_path = self.get_worktree(source_user) / self.content_dir / f"{item}{self.file_suffix}"
         if not source_path.exists():
-            raise FileNotFoundError(f"❌ Cannot fork: Snippet not found: {address}")
+            raise FileNotFoundError(f"❌ Cannot fork: {self.item_name_singular.capitalize()} not found: {address}")
 
-        # Read content from source
         content = source_path.read_text(encoding="utf-8")
 
-        # Write to target user's branch
-        target_address = f"{target_user}/{snippet}"
-        self.write_snippet(target_address, content)
+        target_address = f"{target_user}/{item}"
+        self.write_item(target_address, content)
 
-        print(f"✅ Forked snippet: {address} → {target_address}")
+        print(f"✅ Forked {self.item_name_singular}: {address} → {target_address}")
         return target_address
 
-    def write_snippet(self, address, content):
-        """Write and commit snippet to repo."""
-        user, snippet = address.split("/")
+    def write_item(self, address, content):
+        """Write and commit item to repo."""
+        user, item = address.split("/")
         if self.get_username() != user:
             raise PermissionError(f"❌ Cannot write to another user's branch: {user}")
 
         worktree = self.get_worktree(user)
-        prompts_dir = worktree / "prompts"
-        prompts_dir.mkdir(parents=True, exist_ok=True)
-        snippet_path = prompts_dir / f"{snippet}.prompt.md"
-        snippet_path.write_text(content, encoding="utf-8")
+        content_path = worktree / self.content_dir
+        content_path.mkdir(parents=True, exist_ok=True)
+        item_path = content_path / f"{item}{self.file_suffix}"
+        item_path.write_text(content, encoding="utf-8")
 
-        self.git.run_in_worktree(worktree, "add", str(snippet_path))
-        self.git.run_in_worktree(worktree, "commit", "-m", f"Update snippet: {snippet}")
+        self.git.run_in_worktree(worktree, "add", str(item_path))
+        self.git.run_in_worktree(worktree, "commit", "-m", f"Update {self.item_name_singular}: {item}")
         self.git.run_in_worktree(worktree, "push", "origin", user)
-        print(f"✅ Wrote snippet: {address}")
+        print(f"✅ Wrote {self.item_name_singular}: {address}")
 
-        self.load_templates()
+        self.load_items()
 
-    def edit_snippet(self, address):
-        """Open a snippet in the user's editor, then save and commit any changes."""
-        # Parse the address to get user and snippet name
+    def edit_item(self, address):
+        """Open an item in the user's editor, then save and commit any changes."""
         user = address.split("/")[0] if "/" in address else self.get_username()
-        snippet = address.split("/")[-1]
+        item = address.split("/")[-1]
 
-        # Get the file path
         worktree = self.get_worktree(user)
-        prompts_dir = worktree / "prompts"
-        snippet_path = prompts_dir / f"{snippet}.prompt.md"
+        content_path = worktree / self.content_dir
+        item_path = content_path / f"{item}{self.file_suffix}"
 
-        if not snippet_path.exists():
-            raise FileNotFoundError(f"❌ Snippet not found: {address}")
+        if not item_path.exists():
+            raise FileNotFoundError(f"❌ {self.item_name_singular.capitalize()} not found: {address}")
 
-        # Get the content before editing
-        content_before = snippet_path.read_text(encoding="utf-8")
+        content_before = item_path.read_text(encoding="utf-8")
 
-        # Open the file in the user's editor
         editor = os.environ.get("EDITOR", "vim")
-        subprocess.run([editor, str(snippet_path)], check=True)
+        subprocess.run([editor, str(item_path)], check=True)
 
-        # Get the content after editing
-        content_after = snippet_path.read_text(encoding="utf-8")
+        content_after = item_path.read_text(encoding="utf-8")
 
-        # If the content has changed, commit and push the changes
         if content_before != content_after:
-            self.git.run_in_worktree(worktree, "add", str(snippet_path))
-            self.git.run_in_worktree(worktree, "commit", "-m", f"Edit snippet: {snippet}")
+            self.git.run_in_worktree(worktree, "add", str(item_path))
+            self.git.run_in_worktree(worktree, "commit", "-m", f"Edit {self.item_name_singular}: {item}")
             self.git.run_in_worktree(worktree, "push", "origin", user)
-            print(f"✅ Edited and saved snippet: {address}")
-            self.load_templates()
+            print(f"✅ Edited and saved {self.item_name_singular}: {address}")
+            self.load_items()
         else:
             print("No changes made.")
 
-    def copy_snippet(self, address, hydrate_args=None):
-        """Copy a snippet to the clipboard, either raw or hydrated.
-
-        Args:
-            address: The address of the snippet in format user/snippet
-            hydrate_args: If provided, hydrate the snippet with these args before copying
-                          Format: {'arg1': 'value1', 'arg2': 'value2', 'suffix': 'suffix text'}
-        """
-        # Parse the address to get user and snippet name
+    def copy_item(self, address):
+        """Copy an item to the clipboard."""
         user = address.split("/")[0] if "/" in address else self.get_username()
-        snippet = address.split("/")[-1]
-        full_address = f"{user}/{snippet}"
+        item = address.split("/")[-1]
+        full_address = f"{user}/{item}"
 
-        # First try to get content from template cache
-        if full_address in self.template_manager.cached_templates:
-            content = self.template_manager.cached_templates[full_address]
+        if full_address in self.cached_items:
+            content = self.cached_items[full_address]
         else:
-            # Fallback to reading from file
-            snippet_path = self.get_worktree(user) / "prompts" / f"{snippet}.prompt.md"
-            if not snippet_path.exists():
-                raise FileNotFoundError(f"❌ Snippet not found: {address}")
-            content = snippet_path.read_text(encoding="utf-8")
+            item_path = self.get_worktree(user) / self.content_dir / f"{item}{self.file_suffix}"
+            if not item_path.exists():
+                raise FileNotFoundError(f"❌ {self.item_name_singular.capitalize()} not found: {address}")
+            content = item_path.read_text(encoding="utf-8")
 
-        # Hydrate if args are provided
-        if hydrate_args:
-            suffix = hydrate_args.pop('suffix', '')
-            content = self.hydrate(full_address, hydrate_args, suffix)
-
-        # Copy to clipboard
         if copy_to_clipboard(content):
-            print(f"✅ Copied {'hydrated' if hydrate_args else 'raw'} snippet to clipboard: {address}")
+            print(f"✅ Copied raw {self.item_name_singular} to clipboard: {address}")
         else:
-            print(f"❌ Failed to copy to clipboard. Here's the content:")
+            print("❌ Failed to copy to clipboard. Here's the content:")
             print("""""")
             print(content)
             print("""""")
 
-    def load_templates(self):
-        """Reload template cache."""
-        self.template_manager.cached_templates.clear()
-        self._generate_map_of_snippet_names_to_content()
+    def load_items(self):
+        """Reload item cache."""
+        self.cached_items.clear()
+        self._generate_map_of_item_names_to_content()
 
-    def delete_snippet(self, address):
-        """Delete a snippet from the user's branch."""
-        user, snippet = address.split("/")
+    def delete_item(self, address):
+        """Delete an item from the user's branch."""
+        user, item = address.split("/")
         if self.get_username() != user:
             raise PermissionError(f"❌ Cannot delete from another user's branch: {user}")
 
         worktree = self.get_worktree(user)
-        snippet_path = worktree / "prompts" / f"{snippet}.prompt.md"
+        item_path = worktree / self.content_dir / f"{item}{self.file_suffix}"
 
-        if not snippet_path.exists():
-            raise FileNotFoundError(f"❌ Snippet not found: {address}")
+        if not item_path.exists():
+            raise FileNotFoundError(f"❌ {self.item_name_singular.capitalize()} not found: {address}")
 
-        snippet_path.unlink()
+        item_path.unlink()
 
-        self.git.run_in_worktree(worktree, "add", str(snippet_path))
-        self.git.run_in_worktree(worktree, "commit", "-m", f"Delete snippet: {snippet}")
+        self.git.run_in_worktree(worktree, "add", str(item_path))
+        self.git.run_in_worktree(worktree, "commit", "-m", f"Delete {self.item_name_singular}: {item}")
         self.git.run_in_worktree(worktree, "push", "origin", user)
-        print(f"✅ Deleted snippet: {address}")
+        print(f"✅ Deleted {self.item_name_singular}: {address}")
 
-        self.load_templates()
+        self.load_items()
 
-    def hydrate(self, template_name, args, suffix=""):
-        """Fill template with provided arguments."""
-        return self.template_manager.hydrate(template_name, args, suffix)
-
-    def search_snippets(self, query):
-        """Search for a query in all snippets."""
-        snippets = self._generate_map_of_snippet_names_to_content()
+    def search_items(self, query):
+        """Search for a query in all items."""
+        items = self._generate_map_of_item_names_to_content()
         found = False
-        for name, content in snippets.items():
+        for name, content in items.items():
             lines = content.splitlines()
             for i, line in enumerate(lines):
                 if query in line:
@@ -370,47 +343,50 @@ class SnippetRepo:
         if not found:
             print(f"No results found for '{query}'")
 
-    def rename_snippet(self, source_address, destination_address):
-        """Rename a snippet."""
+    def rename_item(self, source_address, destination_address):
+        """Rename an item."""
         if "/" in source_address or "/" in destination_address:
             raise ValueError(
                 "Source and destination addresses cannot contain slashes. "
-                "You may only rename snippets in the current user's branch.")
-        source_snippet = source_address
-        dest_snippet = destination_address
+                f"You may only rename {self.content_dir} in the current user's branch.")
+        source_item = source_address
+        dest_item = destination_address
         source_user = self.get_username()
 
         worktree = self.get_worktree(source_user)
-        source_path = worktree / "prompts" / f"{source_snippet}.prompt.md"
-        dest_path = worktree / "prompts" / f"{dest_snippet}.prompt.md"
+        source_path = worktree / self.content_dir / f"{source_item}{self.file_suffix}"
+        dest_path = worktree / self.content_dir / f"{dest_item}{self.file_suffix}"
 
         if not source_path.exists():
-            raise FileNotFoundError(f"❌ Snippet not found: {source_address}")
+            raise FileNotFoundError(f"❌ {self.item_name_singular.capitalize()} not found: {source_address}")
 
         if dest_path.exists():
-            raise FileExistsError(f"❌ Snippet already exists: {destination_address}")
+            raise FileExistsError(f"❌ {self.item_name_singular.capitalize()} already exists: {destination_address}")
 
         source_path.rename(dest_path)
 
         self.git.run_in_worktree(worktree, "add", str(source_path), str(dest_path))
-        self.git.run_in_worktree(worktree, "commit", "-m", f"Rename snippet: {source_snippet} to {dest_snippet}")
+        self.git.run_in_worktree(worktree, "commit", "-m",
+                                 f"Rename {self.item_name_singular}: {source_item} to {dest_item}")
         self.git.run_in_worktree(worktree, "push", "origin", source_user)
-        print(f"✅ Renamed snippet: {source_address} to {destination_address}")
+        print(f"✅ Renamed {self.item_name_singular}: {source_address} to {destination_address}")
 
-        self.load_templates()
+        self.load_items()
 
-    def create_new_prompt_file(self, template_dir, filename):
-        """Create new prompt file interactively."""
-        prompts_dir = template_dir / "prompts"
-        filename = f"{filename}.prompt.md" if not filename.endswith(".prompt.md") else filename
+    def create_new_file(self, template_dir, filename):
+        """Create new item file interactively."""
+        content_path = template_dir / self.content_dir
+        # ensure that the path exists
+        os.makedirs(content_path, exist_ok=True)
+        filename = f"{filename}{self.file_suffix}" if not filename.endswith(self.file_suffix) else filename
 
-        full_path = prompts_dir / filename
+        full_path = content_path / filename
         if full_path.exists():
             print("File already exists. Overwrite? [y/N]")
             if input("> ").lower() != "y":
                 return
 
-        print(f"Enter prompt content for {filename}. Type 'EOF' on a new line to finish.")
+        print(f"Enter content for {filename}. Type 'EOF' on a new line to finish.")
         content = []
         while True:
             line = input()
@@ -419,5 +395,94 @@ class SnippetRepo:
             content.append(line)
 
         full_path.write_text("\n".join(content).strip() + "\n", encoding="utf-8")
+
+        if isinstance(self, ScriptRepo):
+            full_path.chmod(0o755)
+        else:
+            full_path.chmod(0o644)
+
         print(f"Saved: {filename}")
+        self.load_items()
+
+
+class PromptRepo(BaseRepo):
+    """Manages a Git repository containing prompt templates."""
+
+    def __init__(self, repo_slug, base_dir="~/.git_worktree_cache"):
+        super().__init__(repo_slug, "prompts", ".prompt.md", "prompt", base_dir)
+        self.template_manager = TemplateManager()
         self.load_templates()
+
+    def load_templates(self):
+        """Reload template cache."""
+        self.cached_items = self._generate_map_of_item_names_to_content()
+        self.template_manager.load_templates(self.cached_items)
+
+    def copy_item(self, address, hydrate_args=None):
+        """Copy a prompt to the clipboard, either raw or hydrated."""
+        user = address.split("/")[0] if "/" in address else self.get_username()
+        item = address.split("/")[-1]
+        full_address = f"{user}/{item}"
+
+        if full_address in self.cached_items:
+            content = self.cached_items[full_address]
+        else:
+            item_path = self.get_worktree(user) / self.content_dir / f"{item}{self.file_suffix}"
+            if not item_path.exists():
+                raise FileNotFoundError(f"❌ Prompt not found: {address}")
+            content = item_path.read_text(encoding="utf-8")
+
+        if hydrate_args:
+            suffix = hydrate_args.pop('suffix', '')
+            content = self.hydrate(full_address, hydrate_args, suffix)
+
+        if copy_to_clipboard(content):
+            print(f"✅ Copied {'hydrated' if hydrate_args else 'raw'} prompt to clipboard: {address}")
+        else:
+            print("❌ Failed to copy to clipboard. Here's the content:")
+            print("""""")
+            print(content)
+            print("""""")
+
+    def hydrate(self, template_name, args, suffix=""):
+        """Fill template with provided arguments."""
+        return self.template_manager.hydrate(template_name, args, suffix)
+
+    def load_items(self):
+        self.load_templates()
+
+
+class SnippetRepo(BaseRepo):
+    """Manages a Git repository containing text snippets."""
+
+    def __init__(self, repo_slug, base_dir="~/.git_worktree_cache"):
+        super().__init__(repo_slug, "snippets", ".snippet.txt", "snippet", base_dir)
+
+
+class ScriptRepo(BaseRepo):
+    """Manages a Git repository containing executable scripts."""
+
+    def __init__(self, repo_slug, base_dir="~/.git_worktree_cache"):
+        super().__init__(repo_slug, "scripts", "", "script", base_dir)
+
+    def run(self, address, args=None):
+        """Run a script from the repository."""
+        user = address.split("/")[0] if "/" in address else self.get_username()
+        item_name = address.split("/")[-1]
+        item_path = self.get_worktree(user) / self.content_dir / item_name
+        if not item_path.exists():
+            raise FileNotFoundError(f"❌ Script not found: {address}")
+
+        # Ensure script is executable
+        os.chmod(item_path, 0o755)
+
+        command = [str(item_path)] + (args or [])
+        try:
+            result = subprocess.run(command, check=True, capture_output=True, text=True)
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Script '{address}' failed with exit code {e.returncode}", file=sys.stderr)
+            print(e.stdout)
+            print(e.stderr, file=sys.stderr)

@@ -1,12 +1,7 @@
 """Fork command implementation."""
 
-def fork_snippet(repo, address):
-    """Copy a snippet from another user's branch to your branch.
-
-    Args:
-        repo: The snippet repository
-        address: Snippet address in user/snippet format
-    """
+def fork_item(repo, address):
+    """Fork an item from another user to your branch."""
     if not address:
-        raise ValueError("Usage: fork <user/snippet>")
-    repo.fork_snippet(address)
+        raise ValueError("Usage: fork <user/item>")
+    repo.fork_item(address)
